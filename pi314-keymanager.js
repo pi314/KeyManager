@@ -67,6 +67,10 @@ update on 20130925
         add KeyManager._add_namespace()
         add KeyManager.namespace()
     set version number to beta-5
+
+update on 20131003
+    fix bug: the 'DEFAULT' namespace wasn't been initialized.
+    change 'DEFAULT' to '__DEFAULT__'
 *******************************************************************************/
 
 NUMBER = '1234567890';
@@ -175,7 +179,7 @@ KeyManager = (function () {
     var _alt_state = false;
     var _caps_state = false;
 
-    var _cur_namespace = 'DEFAULT';
+    var _cur_namespace = '__DEFAULT__';
 
     var _shift_alias_key = function (key) {
         if (key in _shift_alias_table) {
@@ -421,6 +425,8 @@ KeyManager = (function () {
         });
     });
 
+    _add_namespace(_cur_namespace);
+
     return {
         keydown : function (key, callback) {
             key = _alias_key(key);
@@ -468,7 +474,7 @@ KeyManager = (function () {
         },
         namespace : function (i) {
             if (i == undefined) {
-                i = 'DEFAULT';
+                i = '__DEFAULT__';
             }
             _cur_namespace = i;
             _add_namespace(_cur_namespace);
