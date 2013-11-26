@@ -71,6 +71,13 @@ update on 20130925
 update on 20131003
     fix bug: the 'DEFAULT' namespace wasn't been initialized.
     change 'DEFAULT' to '__DEFAULT__'
+
+update on 20131012
+    although this is a little bit strenge,
+    I add scroll_down and scroll_up binding feature into KeyManager
+    KeyManager.scroll_down(callback);
+    KeyManager.scroll_up(callback);
+    this can be used to bind event on mouse wheel scroll.
 *******************************************************************************/
 
 NUMBER = '1234567890';
@@ -423,9 +430,27 @@ KeyManager = (function () {
             if (ignore_input_flag) return;
             disable = false;
         });
+
+        $('body').bind('mousewheel DOMMouseScroll', function(event) {
+            //var delta = event.originalEvent.wheelDelta || (-event.detail);
+            var delta = 0;
+            if (event.originalEvent.detail) { // Firefox
+                delta = -event.originalEvent.detail;
+            } else if (event.originalEvent.wheelDelta) { // Chrome, IE
+                delta = event.originalEvent.wheelDelta;
+            }
+            if (delta > 0) {
+                return _wheel_up();
+            } else if (delta < 0) {
+                return _wheel_down();
+            }
+        });
     });
 
     _add_namespace(_cur_namespace);
+
+    var _wheel_up = function () {return true;};
+    var _wheel_down = function () {return false;};
 
     return {
         keydown : function (key, callback) {
@@ -479,6 +504,14 @@ KeyManager = (function () {
             _cur_namespace = i;
             _add_namespace(_cur_namespace);
             return KeyManager;
-        }
+        },
+        scroll_down: function (i) {
+            _wheel_down = i;
+            return KeyManager;
+        },
+        scroll_up: function (i) {
+            _wheel_up = i;
+            return KeyManager;
+        },
     };
 })();
