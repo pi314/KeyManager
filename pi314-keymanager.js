@@ -78,6 +78,9 @@ update on 20131012
     KeyManager.scroll_down(callback);
     KeyManager.scroll_up(callback);
     this can be used to bind event on mouse wheel scroll.
+
+update on 20131030
+    Fix error on scrolling: no namespace, and scroll down returns false.
 *******************************************************************************/
 
 NUMBER = '1234567890';
@@ -440,17 +443,22 @@ KeyManager = (function () {
                 delta = event.originalEvent.wheelDelta;
             }
             if (delta > 0) {
-                return _wheel_up();
+                if (_cur_namespace in _wheel_up) {
+                    return _wheel_up();
+                }
             } else if (delta < 0) {
-                return _wheel_down();
+                if (_cur_namespace in _wheel_down) {
+                    return _wheel_down();
+                }
             }
+            return true;
         });
     });
 
     _add_namespace(_cur_namespace);
 
-    var _wheel_up = function () {return true;};
-    var _wheel_down = function () {return false;};
+    var _wheel_up = {};
+    var _wheel_down = {};
 
     return {
         keydown : function (key, callback) {
@@ -506,11 +514,11 @@ KeyManager = (function () {
             return KeyManager;
         },
         scroll_down: function (i) {
-            _wheel_down = i;
+            _wheel_down[_cur_namespace] = i;
             return KeyManager;
         },
         scroll_up: function (i) {
-            _wheel_up = i;
+            _wheel_up[_cur_namespace] = i;
             return KeyManager;
         },
     };
