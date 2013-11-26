@@ -81,6 +81,9 @@ update on 20131012
 
 update on 20131030
     Fix error on scrolling: no namespace, and scroll down returns false.
+
+update on 20131125
+    Remove "return false" action on keydown and keyup /<.-.>/
 *******************************************************************************/
 
 NUMBER = '1234567890';
@@ -307,7 +310,7 @@ KeyManager = (function () {
             if (ret == undefined) return false;
             return ret;
         }
-        if (/<.-.*>/.test(key_string)) return false;
+        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
@@ -363,7 +366,7 @@ KeyManager = (function () {
             if (ret == undefined) return false;
             return ret;
         }
-        if (/<.-.*>/.test(key_string)) return false;
+        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
