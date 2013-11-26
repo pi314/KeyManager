@@ -8,6 +8,9 @@ KeyManager.keydown(key, callback);
 KeyManager.keyup(key, callback);
 KeyManager.keyup(key, callback).keyup(key, callback)...;
 
+KeyManager.namespace();
+KeyManager.namespace('test');
+
 Key can be:
 .   A string includes normal characters like 'pi314'.
 .   A string includes special characters like '!@#$%^&*(asdf'.
@@ -58,6 +61,12 @@ update on 20130907
 
     add KeyManager.ignore_input() to ignore input tags and textarea tags.
 
+update on 20130925
+    %s/^ *$//g
+    add namespaces
+        add KeyManager._add_namespace()
+        add KeyManager.namespace()
+    set version number to beta-5
 *******************************************************************************/
 
 NUMBER = '1234567890';
@@ -101,7 +110,7 @@ KeyManager = (function () {
         ],
         'SYMBOL' : ['`~!@#$%^&*()-=_+[]{}|;\':",./<>?', 'BACKSLASH'],
     };
-    
+
     var _named_key_list = {
         'SHIFT':'',   'CTRL':'',      'ALT':'',
         'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',   'SPACE':'',
@@ -112,7 +121,7 @@ KeyManager = (function () {
         'F5':'',      'F6':'',        'F7':'',    'F8':'',
         'F9':'',      'F10':'',       'F11':'',   'F12' :'',
         'BACKSLASH':''};
-        
+
     var _shift_alias_table = {
         '~':'`', '!':'1', '@':'2', '#':'3', '$':'4', '%':'5',
         '^':'6', '&':'7', '*':'8', '(':'9', ')':'0', '_':'-',
@@ -123,7 +132,7 @@ KeyManager = (function () {
         'Z':'z', 'X':'x', 'C':'c', 'V':'v', 'B':'b', 'N':'n',
         'M':'m', '<':',', '>':'.', '?':'/', '"':'\''
     };
-    
+
     var _reverse_shift_alias_table = {
         '`':'~', '1':'!', '2':'@', '3':'#', '4':'$', '5':'%',
         '6':'^', '7':'&', '8':'*', '9':'(', '0':')', '-':'_',
@@ -134,7 +143,7 @@ KeyManager = (function () {
         'z':'Z', 'x':'X', 'c':'C', 'v':'V', 'b':'B', 'n':'N',
         'm':'M', ',':'<', '.':'>', '/':'?', '\'':'"'
     };
-    
+
     var _key_code_table = {
         8:'BACKSPACE',        9 :'TAB',        13:'ENTER',
         16:'SHIFT',           17:'CTRL',       18:'ALT',
@@ -152,7 +161,7 @@ KeyManager = (function () {
         192:'`',              219:'[',         220:'BACKSLASH',
         221:']',              222:'\'',
     };
-    
+
     var _keydown_table = {};
     var _ctrl_keydown_table = {};
     var _alt_keydown_table = {};
@@ -165,36 +174,38 @@ KeyManager = (function () {
     var _shift_state = false;
     var _alt_state = false;
     var _caps_state = false;
-    
+
+    var _cur_namespace = 'DEFAULT';
+
     var _shift_alias_key = function (key) {
         if (key in _shift_alias_table) {
             return '<S-'+_shift_alias_table[key]+'>';
         }
         return key;
     };
-    
+
     var _reverse_shift_alias_key = function (key) {
         if (key in _reverse_shift_alias_table) {
             return _reverse_shift_alias_table[key];
         }
         return key;
     };
-    
+
     var _named_key = function (key) {
         if (key in _named_key_list) return true;
         return false;
     };
-    
+
     var _combine_key = function (key) {
         if (/<.-.*>/.test(key)) return true;
         return false;
     };
-    
+
     var _alias_key = function (key) {
         if (key in _alias_key_table) return _alias_key_table[key];
         return key;
     };
-    
+
     var _parseCode = function (input) {
         if (typeof input !== 'number') return 'UNKNOWN';
         if (input in _key_code_table) {
@@ -207,7 +218,7 @@ KeyManager = (function () {
         console.log(input);
         return 'UNKNOWN';
     };
-    
+
     var _parse_key = function (key) {
         if (/<C-.>/.test(key)) {
             return ['CTRL', key[3]];
@@ -220,7 +231,18 @@ KeyManager = (function () {
         }
         return ['NORMAL', key];
     };
-    
+
+    var _add_namespace = function (i) {
+        if (_keydown_table[i]       == undefined) {       _keydown_table[i] = {}; }
+        if (_ctrl_keydown_table[i]  == undefined) {  _ctrl_keydown_table[i] = {}; }
+        if (_alt_keydown_table[i]   == undefined) {   _alt_keydown_table[i] = {}; }
+        if (_shift_keydown_table[i] == undefined) { _shift_keydown_table[i] = {}; }
+        if (_keyup_table[i]       == undefined) {       _keyup_table[i] = {}; }
+        if (_ctrl_keyup_table[i]  == undefined) {  _ctrl_keyup_table[i] = {}; }
+        if (_alt_keyup_table[i]   == undefined) {   _alt_keyup_table[i] = {}; }
+        if (_shift_keyup_table[i] == undefined) { _shift_keyup_table[i] = {}; }
+    };
+
     var _keydown = function (event) {
         var k = _parseCode(event.which);
         if (k == 'CTRL') {
@@ -230,20 +252,20 @@ KeyManager = (function () {
         } else if (k == 'SHIFT') {
             _shift_state = true;
         }
-        
+
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
-            target_table = _ctrl_keydown_table;
+            target_table = _ctrl_keydown_table[_cur_namespace];
             key_string = '<C-'+k+'>';
         } else if (_alt_state) {
-            target_table = _alt_keydown_table;
+            target_table = _alt_keydown_table[_cur_namespace];
             key_string = '<A-'+k+'>';
         } else if (_shift_state) {
-            target_table = _shift_keydown_table;
+            target_table = _shift_keydown_table[_cur_namespace];
             key_string = _reverse_shift_alias_key(k);
         } else {
-            target_table = _keydown_table;
+            target_table = _keydown_table[_cur_namespace];
             key_string = k;
         }
 
@@ -255,13 +277,13 @@ KeyManager = (function () {
         }
 
         if (key_string == '<C-[>') {
-            if ('ESC' in _keydown_table) {
-                return _keydown_table['ESC']('ESC');
+            if ('ESC' in _keydown_table[_cur_namespace]) {
+                return _keydown_table[_cur_namespace]['ESC']('ESC');
             }
         }
         if (key_string == '<C-h>') {
-            if ('BACKSPACE' in _keydown_table) {
-                _keydown_table['BACKSPACE']('BACKSPACE');
+            if ('BACKSPACE' in _keydown_table[_cur_namespace]) {
+                _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
@@ -274,7 +296,7 @@ KeyManager = (function () {
         if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
-    
+
     var _keyup = function (event) {
         var k = _parseCode(event.which);
         if (k == 'CTRL') {
@@ -286,20 +308,20 @@ KeyManager = (function () {
         } else if (k == 'CAPSLOCK') {
             _caps_state = !_caps_state;
         }
-        
+
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
-            target_table = _ctrl_keyup_table;
+            target_table = _ctrl_keyup_table[_cur_namespace];
             key_string = '<C-'+k+'>';
         } else if (_alt_state) {
-            target_table = _alt_keyup_table;
+            target_table = _alt_keyup_table[_cur_namespace];
             key_string = '<A-'+k+'>';
         } else if (_shift_state) {
-            target_table = _shift_keyup_table;
+            target_table = _shift_keyup_table[_cur_namespace];
             key_string = _reverse_shift_alias_key(k);
         } else {
-            target_table = _keyup_table;
+            target_table = _keyup_table[_cur_namespace];
             key_string = k;
         }
 
@@ -309,15 +331,15 @@ KeyManager = (function () {
             }
             return true;
         }
-        
+
         if (key_string == '<C-[>') {
-            if ('ESC' in _keyup_table) {
-                return _keyup_table['ESC']('ESC');
+            if ('ESC' in _keyup_table[_cur_namespace]) {
+                return _keyup_table[_cur_namespace]['ESC']('ESC');
             }
         }
         if (key_string == '<C-h>') {
-            if ('BACKSPACE' in _keyup_table) {
-                _keydown_table['BACKSPACE']('BACKSPACE');
+            if ('BACKSPACE' in _keyup_table[_cur_namespace]) {
+                _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
@@ -330,34 +352,34 @@ KeyManager = (function () {
         if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
-    
+
     var _bind = function (key, edge, callback) {
         var key_tuple = _parse_key(key);
         var key_type = key_tuple[0];
         var key_content = key_tuple[1];
         var target_table = null;
-        
+
         if (edge == 'DOWN') {
             if (key_type == 'NORMAL') {
-                target_table = _keydown_table;
+                target_table = _keydown_table[_cur_namespace];
             } else if (key_type == 'CTRL') {
-                target_table = _ctrl_keydown_table;
+                target_table = _ctrl_keydown_table[_cur_namespace];
             } else if (key_type == 'ALT') {
-                target_table = _alt_keydown_table;
+                target_table = _alt_keydown_table[_cur_namespace];
             } else if (key_type == 'SHIFT') {
-                target_table = _shift_keydown_table;
+                target_table = _shift_keydown_table[_cur_namespace];
             }
         }
-        
+
         if (edge == 'UP') {
             if (key_type == 'NORMAL') {
-                target_table = _keyup_table;
+                target_table = _keyup_table[_cur_namespace];
             } else if (key_type == 'CTRL') {
-                target_table = _ctrl_keyup_table;
+                target_table = _ctrl_keyup_table[_cur_namespace];
             } else if (key_type == 'ALT') {
-                target_table = _alt_keyup_table;
+                target_table = _alt_keyup_table[_cur_namespace];
             } else if (key_type == 'SHIFT') {
-                target_table = _shift_keyup_table;
+                target_table = _shift_keyup_table[_cur_namespace];
             }
         }
         if (target_table != null) {
@@ -372,7 +394,7 @@ KeyManager = (function () {
         //    }
         //}
     };
-    
+
     // Some important bindings to browser
     $(window).blur(function () {
         _ctrl_state = false;
@@ -398,7 +420,7 @@ KeyManager = (function () {
             disable = false;
         });
     });
-    
+
     return {
         keydown : function (key, callback) {
             key = _alias_key(key);
@@ -444,5 +466,13 @@ KeyManager = (function () {
                 disable = false;
             }
         },
+        namespace : function (i) {
+            if (i == undefined) {
+                i = 'DEFAULT';
+            }
+            _cur_namespace = i;
+            _add_namespace(_cur_namespace);
+            return KeyManager;
+        }
     };
 })();
