@@ -26,7 +26,7 @@ KeyManager = (function () {
     var LOG_LEVEL = {
         'UNDEFINED_KEY': '',
         'ERROR':         '',
-        'VERBOSE':       '',
+        //'VERBOSE':       '',
         //'INFO': '', 
         };
 
