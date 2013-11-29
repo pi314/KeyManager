@@ -1,3 +1,22 @@
+update on 20131129
+==================
+
+-   log related
+
+    -   Add a new function ``log`` to manage many kinds of logs
+
+    -   Add a variable ``LOG_LEVEL`` to choose which type of log are going to be showed
+
+-   Rename ``_named_key_list`` to ``_named_key_set``
+
+-   Add keycodes of number pad
+
+-   Rename ``disable`` to ``_disable``
+
+-   Rename ``ignore_input_flag`` to ``_ignore_input_flag``
+
+-   Add many comments that should be added in history
+
 update on 20131125
 ==================
 

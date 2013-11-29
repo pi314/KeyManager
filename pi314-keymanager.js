@@ -22,6 +22,15 @@ console.log('ARROW:', ARROW);
 console.log('CONTROL:', CONTROL);
 
 KeyManager = (function () {
+    // what type of log should be showed
+    var LOG_LEVEL = {
+        'UNDEFINED_KEY': '',
+        'ERROR':         '',
+        'VERBOSE':       '',
+        //'INFO': '', 
+        };
+
+    // just short cuts, like syntax sugar
     var _alias_key_table = {
         'NUMBER' : '1234567890',
         'LOWER'  : 'abcdefghijklmnopqrstuvwxyz',
@@ -40,7 +49,8 @@ KeyManager = (function () {
         'SYMBOL' : ['`~!@#$%^&*()-=_+[]{}|;\':",./<>?', 'BACKSLASH'],
     };
 
-    var _named_key_list = {
+    // these keys should be used by specified name
+    var _named_key_set = {
         'SHIFT':'',   'CTRL':'',      'ALT':'',
         'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',   'SPACE':'',
         'INSERT':'',  'DELETE':'',    'ESC':'',
@@ -51,6 +61,7 @@ KeyManager = (function () {
         'F9':'',      'F10':'',       'F11':'',   'F12' :'',
         'BACKSLASH':''};
 
+    // for shift-down keys lookup
     var _shift_alias_table = {
         '~':'`', '!':'1', '@':'2', '#':'3', '$':'4', '%':'5',
         '^':'6', '&':'7', '*':'8', '(':'9', ')':'0', '_':'-',
@@ -62,6 +73,7 @@ KeyManager = (function () {
         'M':'m', '<':',', '>':'.', '?':'/', '"':'\''
     };
 
+    // for shift-down keys' reverse lookup
     var _reverse_shift_alias_table = {
         '`':'~', '1':'!', '2':'@', '3':'#', '4':'$', '5':'%',
         '6':'^', '7':'&', '8':'*', '9':'(', '0':')', '-':'_',
@@ -73,6 +85,7 @@ KeyManager = (function () {
         'm':'M', ',':'<', '.':'>', '/':'?', '\'':'"'
     };
 
+    // none regular keycodes
     var _key_code_table = {
         8:'BACKSPACE',        9 :'TAB',        13:'ENTER',
         16:'SHIFT',           17:'CTRL',       18:'ALT',
@@ -89,8 +102,13 @@ KeyManager = (function () {
         189:'-',              190:'.',         191:'/',
         192:'`',              219:'[',         220:'BACKSLASH',
         221:']',              222:'\'',
+
+        110:'.',              106:'*',         107:'+',
+        109:'-',              111:'/',         144:'NUMBERLOCK'
     };
 
+    // "callback function tables tables", these table has two layers.
+    // the first layer is namespace, the second layer is keyname.
     var _keydown_table = {};
     var _ctrl_keydown_table = {};
     var _alt_keydown_table = {};
@@ -99,13 +117,16 @@ KeyManager = (function () {
     var _ctrl_keyup_table = {};
     var _alt_keyup_table = {};
     var _shift_keyup_table = {};
+
     var _ctrl_state = false;
     var _shift_state = false;
     var _alt_state = false;
     var _caps_state = false;
 
+    // current namespace
     var _cur_namespace = '__DEFAULT__';
 
+    // if I got an 'A', I translate it into '<S-a>'
     var _shift_alias_key = function (key) {
         if (key in _shift_alias_table) {
             return '<S-'+_shift_alias_table[key]+'>';
@@ -113,6 +134,10 @@ KeyManager = (function () {
         return key;
     };
 
+    // when I need to translate '<S-a>' back to 'A',
+    // I use regex to parse the key 'a' in the format
+    // and then use this function to lookup 'a'
+    // finally results in 'A'
     var _reverse_shift_alias_key = function (key) {
         if (key in _reverse_shift_alias_table) {
             return _reverse_shift_alias_table[key];
@@ -121,7 +146,7 @@ KeyManager = (function () {
     };
 
     var _named_key = function (key) {
-        if (key in _named_key_list) return true;
+        if (key in _named_key_set) return true;
         return false;
     };
 
@@ -130,22 +155,46 @@ KeyManager = (function () {
         return false;
     };
 
+    // expand alias keys
     var _alias_key = function (key) {
         if (key in _alias_key_table) return _alias_key_table[key];
         return key;
     };
 
-    var _parseCode = function (input) {
-        if (typeof input !== 'number') return 'UNKNOWN';
-        if (input in _key_code_table) {
-            return _key_code_table[input];
-        } else if (65 <= input && input <= 90) {
-            return 'abcdefghijklmnopqrstuvwxyz'[input-65];
-        } else if (48 <= input && input <= 57) {
-            return '0123456789'[input-48];
+    var log = function () {
+        var log_level = arguments[0];
+        if (log_level in LOG_LEVEL) {
+            console.log(Array.prototype.slice.call(arguments).slice(1).join(' '));
         }
-        console.log(input);
-        return 'UNKNOWN';
+    };
+
+    // input a number, output a keyname
+    var _parseCode = function (input, edge) {
+        var ret = 'UNDEFINED';
+        if (typeof input !== 'number') ret = 'UNKNOWN';
+        if (input in _key_code_table) {
+            ret = _key_code_table[input];
+        } else if (65 <= input && input <= 90) {
+            ret = 'abcdefghijklmnopqrstuvwxyz'[input - 65];
+        } else if (48 <= input && input <= 57) {
+            ret = '0123456789'[input - 48];
+        } else if (96 <= input && input <= 105) { // number pad
+            ret = '0123456789'[input - 96];
+        }
+
+        switch (ret) {
+        case 'UNDEFINED':
+            log('UNDEFINED_KEY', 'Detected (', edge, '):', input, ret);
+            break;
+        case 'UNKNOWN':
+            log('ERROR',         'Detected (', edge, '):', input, ret);
+            break;
+        default:
+            log('VERBOSE',       'Detected (', edge, '):', input, ret);
+            break;
+        }
+        //console.log('Detected (' + edge + '):', input, ret);
+        return ret;
     };
 
     var _parse_key = function (key) {
@@ -172,8 +221,11 @@ KeyManager = (function () {
         if (_shift_keyup_table[i] == undefined) { _shift_keyup_table[i] = {}; }
     };
 
+    // trigger keydown event
     var _keydown = function (event) {
-        var k = _parseCode(event.which);
+        var k = _parseCode(event.which, 'keydown');
+
+        // check combined key state
         if (k == 'CTRL') {
             _ctrl_state = true;
         } else if (k == 'ALT') {
@@ -182,6 +234,7 @@ KeyManager = (function () {
             _shift_state = true;
         }
 
+        // lookup tables to pick function callback
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
@@ -198,37 +251,47 @@ KeyManager = (function () {
             key_string = k;
         }
 
-        if (disable) {
+        // _disable is to detect whether an input or textarea being focused
+        if (_disable) {
             if (key_string == 'ESC' || key_string == '<C-[>') {
                 $('input, textarea').blur();
             }
             return true;
         }
 
+        // built-in alias '<C-[>' to 'ESC'
         if (key_string == '<C-[>') {
             if ('ESC' in _keydown_table[_cur_namespace]) {
                 return _keydown_table[_cur_namespace]['ESC']('ESC');
             }
         }
+
+        // built-in alias '<C-h>' to 'BACKSPACE'
         if (key_string == '<C-h>') {
             if ('BACKSPACE' in _keydown_table[_cur_namespace]) {
                 _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
+
+        // normal key lookup
         if (k in target_table) {
             var ret = target_table[k](key_string);
+
+            // 'F5' and 'F12' will not be blocked anyway
             if (key_string == 'F5' || key_string == 'F12') return true;
+
             if (ret == undefined) return false;
             return ret;
         }
-        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
     var _keyup = function (event) {
-        var k = _parseCode(event.which);
+        var k = _parseCode(event.which, ' keyup ');
         if (k == 'CTRL') {
+
+        // check combined key state
             _ctrl_state = false;
         } else if (k == 'ALT') {
             _alt_state = false;
@@ -238,6 +301,7 @@ KeyManager = (function () {
             _caps_state = !_caps_state;
         }
 
+        // lookup tables to pick function callback
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
@@ -254,35 +318,47 @@ KeyManager = (function () {
             key_string = k;
         }
 
-        if (disable) {
+        // _disable is to detect whether an input or textarea being focused
+        if (_disable) {
             if (key_string == 'ESC' || key_string == '<C-[>') {
                 $('input, textarea').blur();
             }
+            // if yes, every key should not be blocked
+            // or users can type anymore
             return true;
         }
 
+        // built-in alias '<C-[>' to 'ESC'
         if (key_string == '<C-[>') {
             if ('ESC' in _keyup_table[_cur_namespace]) {
                 return _keyup_table[_cur_namespace]['ESC']('ESC');
             }
         }
+
+        // built-in alias '<C-h>' to 'BACKSPACE'
         if (key_string == '<C-h>') {
             if ('BACKSPACE' in _keyup_table[_cur_namespace]) {
                 _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
+
+        // normal key lookup
         if (k in target_table) {
             var ret = target_table[k](key_string);
+
+            // 'F5' and 'F12' will not be blocked anyway
             if (key_string == 'F5' || key_string == 'F12') return true;
+
             if (ret == undefined) return false;
             return ret;
         }
-        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
+    // bind callback to key
     var _bind = function (key, edge, callback) {
+        // check if the key is a combined key
         var key_tuple = _parse_key(key);
         var key_type = key_tuple[0];
         var key_content = key_tuple[1];
@@ -314,14 +390,6 @@ KeyManager = (function () {
         if (target_table != null) {
             target_table[key_content] = callback;
         }
-        //if (key_content == 'ESC') {
-        //    console.log('detect esc');
-        //    if (edge == 'DOWN') {
-        //        _ctrl_keydown_table['['] = callback;
-        //    } else if (edge == 'UP') {
-        //        _ctrl_keyup_table['['] = callback;
-        //    }
-        //}
     };
 
     // Some important bindings to browser
@@ -333,22 +401,23 @@ KeyManager = (function () {
         console.log('blured and reset');
     });
 
-    var disable = false;
+    var _disable = false;
 
-    var ignore_input_flag = false;
+    var _ignore_input_flag = false;
 
     $(function () {
         $(document).keydown(_keydown).keyup(_keyup);
 
         $('input, textarea').focus(function () {
-            if (ignore_input_flag) return;
-            disable = true;
+            if (_ignore_input_flag) return;
+            _disable = true;
             console.log('input tag or textarea tag focused.');
         }).blur(function () {
-            if (ignore_input_flag) return;
-            disable = false;
+            if (_ignore_input_flag) return;
+            _disable = false;
         });
 
+        // Mouse wheel scrolling detection
         $('body').bind('mousewheel DOMMouseScroll', function(event) {
             //var delta = event.originalEvent.wheelDelta || (-event.detail);
             var delta = 0;
@@ -370,6 +439,7 @@ KeyManager = (function () {
         });
     });
 
+    // initial namespace
     _add_namespace(_cur_namespace);
 
     var _wheel_up = {};
@@ -415,9 +485,9 @@ KeyManager = (function () {
             return KeyManager;
         },
         ignore_input : function (i) {
-            ignore_input_flag = i;
+            _ignore_input_flag = i;
             if (i) {
-                disable = false;
+                _disable = false;
             }
         },
         namespace : function (i) {
