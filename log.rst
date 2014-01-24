@@ -1,3 +1,10 @@
+update on 20140124
+==================
+
+-   Fix error on scrolling: wrongly usage of _wheel_down and _wheel_up object
+    
+    -   Add namespace for scrolling
+
 update on 20131129
 ==================
 

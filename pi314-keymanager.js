@@ -1,3 +1,94 @@
+/*******************************************************************************
+This module creates a global object which is named KeyManager.
+KeyManager is for handle user keyboard on web pages.
+I made this module for practice.
+
+Usage:
+KeyManager.keydown(key, callback);
+KeyManager.keyup(key, callback);
+KeyManager.keyup(key, callback).keyup(key, callback)...;
+
+KeyManager.namespace();
+KeyManager.namespace('test');
+
+Key can be:
+.   A string includes normal characters like 'pi314'.
+.   A string includes special characters like '!@#$%^&*(asdf'.
+.   A string presents special alias like 'ENTER', 'BACKSPACE', 'BACKSLASH', etc.
+.   A string presents combined keys like '<C-x>', I use Vim's notation.
+.   An arrry includes many strings like ['a', 'b', 'ENTER', 'BACKSLASH', '@#']
+
+Callback must be a function, but I didn't do related check, so be careful please.
+The first argument of callback will be the key being pressed.
+When you use
+
+    KeyManager.keydown('abcde', function (user_input_key) {});
+
+to catch a key, the variable user_input_key helps you to recognize which key is being pressed.
+
+Combined keys
+<C-c>   ctrl+c
+<S-c>   shift+c
+<A-c>   alt+c
+The first symbol presents control keys must in uppercase.
+
+pi314 @ nctu
+2013/05/30
+I love JavaScript, Python, and Vim.
+michael66230@gmail.com
+
+update on 20130701
+    add macros: NUMBER, LOWER, UPPER, ...
+    _alias_key_table may be deprecated.
+
+update on 20130701
+    do alias in _keydown and _keyup to make <C-[> become ESC
+
+update on 20130704
+    do alias in _keydown and _keyup to make <C-h> become BACKSPACE
+    return false so that <C-h> event will not propogate
+
+update on 20130714
+    add check: if a callback function returns undefined,
+    KeyManager return false to keep event propogate,
+    but F5 and F12 event will still be propogated.
+
+    add message shows the constants that KeyManager provides.
+
+update on 20130907
+    set version number to beta-4
+    fix the problem that disables input tags and textarea tags.
+
+    add KeyManager.ignore_input() to ignore input tags and textarea tags.
+
+update on 20130925
+    %s/^ *$//g
+    add namespaces
+        add KeyManager._add_namespace()
+        add KeyManager.namespace()
+    set version number to beta-5
+
+update on 20131003
+    fix bug: the 'DEFAULT' namespace wasn't been initialized.
+    change 'DEFAULT' to '__DEFAULT__'
+
+update on 20131012
+    although this is a little bit strenge,
+    I add scroll_down and scroll_up binding feature into KeyManager
+    KeyManager.scroll_down(callback);
+    KeyManager.scroll_up(callback);
+    this can be used to bind event on mouse wheel scroll.
+
+update on 20131030
+    Fix error on scrolling: no namespace, and scroll down returns false.
+
+update on 20131125
+    Remove "return false" action on keydown and keyup /<.-.>/
+
+update on 20140124
+    Fix error on scrolling: wrongly usage of _wheel_down and _wheel_up object.
+*******************************************************************************/
+
 NUMBER = '1234567890';
 LOWER = 'abcdefghijklmnopqrstuvwxyz';
 UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -20,17 +111,9 @@ console.log('UPPER:', UPPER);
 console.log('ALPHABET:', ALPHABET);
 console.log('ARROW:', ARROW);
 console.log('CONTROL:', CONTROL);
+console.log('Methods: keydown(), keyup(), namespace(), scroll_down(), scroll_up()');
 
 KeyManager = (function () {
-    // what type of log should be showed
-    var LOG_LEVEL = {
-        'UNDEFINED_KEY': '',
-        'ERROR':         '',
-        //'VERBOSE':       '',
-        //'INFO': '', 
-        };
-
-    // just short cuts, like syntax sugar
     var _alias_key_table = {
         'NUMBER' : '1234567890',
         'LOWER'  : 'abcdefghijklmnopqrstuvwxyz',
@@ -49,8 +132,7 @@ KeyManager = (function () {
         'SYMBOL' : ['`~!@#$%^&*()-=_+[]{}|;\':",./<>?', 'BACKSLASH'],
     };
 
-    // these keys should be used by specified name
-    var _named_key_set = {
+    var _named_key_list = {
         'SHIFT':'',   'CTRL':'',      'ALT':'',
         'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',   'SPACE':'',
         'INSERT':'',  'DELETE':'',    'ESC':'',
@@ -61,7 +143,6 @@ KeyManager = (function () {
         'F9':'',      'F10':'',       'F11':'',   'F12' :'',
         'BACKSLASH':''};
 
-    // for shift-down keys lookup
     var _shift_alias_table = {
         '~':'`', '!':'1', '@':'2', '#':'3', '$':'4', '%':'5',
         '^':'6', '&':'7', '*':'8', '(':'9', ')':'0', '_':'-',
@@ -73,7 +154,6 @@ KeyManager = (function () {
         'M':'m', '<':',', '>':'.', '?':'/', '"':'\''
     };
 
-    // for shift-down keys' reverse lookup
     var _reverse_shift_alias_table = {
         '`':'~', '1':'!', '2':'@', '3':'#', '4':'$', '5':'%',
         '6':'^', '7':'&', '8':'*', '9':'(', '0':')', '-':'_',
@@ -85,7 +165,6 @@ KeyManager = (function () {
         'm':'M', ',':'<', '.':'>', '/':'?', '\'':'"'
     };
 
-    // none regular keycodes
     var _key_code_table = {
         8:'BACKSPACE',        9 :'TAB',        13:'ENTER',
         16:'SHIFT',           17:'CTRL',       18:'ALT',
@@ -102,13 +181,8 @@ KeyManager = (function () {
         189:'-',              190:'.',         191:'/',
         192:'`',              219:'[',         220:'BACKSLASH',
         221:']',              222:'\'',
-
-        110:'.',              106:'*',         107:'+',
-        109:'-',              111:'/',         144:'NUMBERLOCK'
     };
 
-    // "callback function tables tables", these table has two layers.
-    // the first layer is namespace, the second layer is keyname.
     var _keydown_table = {};
     var _ctrl_keydown_table = {};
     var _alt_keydown_table = {};
@@ -117,16 +191,13 @@ KeyManager = (function () {
     var _ctrl_keyup_table = {};
     var _alt_keyup_table = {};
     var _shift_keyup_table = {};
-
     var _ctrl_state = false;
     var _shift_state = false;
     var _alt_state = false;
     var _caps_state = false;
 
-    // current namespace
     var _cur_namespace = '__DEFAULT__';
 
-    // if I got an 'A', I translate it into '<S-a>'
     var _shift_alias_key = function (key) {
         if (key in _shift_alias_table) {
             return '<S-'+_shift_alias_table[key]+'>';
@@ -134,10 +205,6 @@ KeyManager = (function () {
         return key;
     };
 
-    // when I need to translate '<S-a>' back to 'A',
-    // I use regex to parse the key 'a' in the format
-    // and then use this function to lookup 'a'
-    // finally results in 'A'
     var _reverse_shift_alias_key = function (key) {
         if (key in _reverse_shift_alias_table) {
             return _reverse_shift_alias_table[key];
@@ -146,7 +213,7 @@ KeyManager = (function () {
     };
 
     var _named_key = function (key) {
-        if (key in _named_key_set) return true;
+        if (key in _named_key_list) return true;
         return false;
     };
 
@@ -155,46 +222,22 @@ KeyManager = (function () {
         return false;
     };
 
-    // expand alias keys
     var _alias_key = function (key) {
         if (key in _alias_key_table) return _alias_key_table[key];
         return key;
     };
 
-    var log = function () {
-        var log_level = arguments[0];
-        if (log_level in LOG_LEVEL) {
-            console.log(Array.prototype.slice.call(arguments).slice(1).join(' '));
-        }
-    };
-
-    // input a number, output a keyname
-    var _parseCode = function (input, edge) {
-        var ret = 'UNDEFINED';
-        if (typeof input !== 'number') ret = 'UNKNOWN';
+    var _parseCode = function (input) {
+        if (typeof input !== 'number') return 'UNKNOWN';
         if (input in _key_code_table) {
-            ret = _key_code_table[input];
+            return _key_code_table[input];
         } else if (65 <= input && input <= 90) {
-            ret = 'abcdefghijklmnopqrstuvwxyz'[input - 65];
+            return 'abcdefghijklmnopqrstuvwxyz'[input-65];
         } else if (48 <= input && input <= 57) {
-            ret = '0123456789'[input - 48];
-        } else if (96 <= input && input <= 105) { // number pad
-            ret = '0123456789'[input - 96];
+            return '0123456789'[input-48];
         }
-
-        switch (ret) {
-        case 'UNDEFINED':
-            log('UNDEFINED_KEY', 'Detected (', edge, '):', input, ret);
-            break;
-        case 'UNKNOWN':
-            log('ERROR',         'Detected (', edge, '):', input, ret);
-            break;
-        default:
-            log('VERBOSE',       'Detected (', edge, '):', input, ret);
-            break;
-        }
-        //console.log('Detected (' + edge + '):', input, ret);
-        return ret;
+        console.log(input);
+        return 'UNKNOWN';
     };
 
     var _parse_key = function (key) {
@@ -215,17 +258,16 @@ KeyManager = (function () {
         if (_ctrl_keydown_table[i]  == undefined) {  _ctrl_keydown_table[i] = {}; }
         if (_alt_keydown_table[i]   == undefined) {   _alt_keydown_table[i] = {}; }
         if (_shift_keydown_table[i] == undefined) { _shift_keydown_table[i] = {}; }
-        if (_keyup_table[i]       == undefined) {       _keyup_table[i] = {}; }
-        if (_ctrl_keyup_table[i]  == undefined) {  _ctrl_keyup_table[i] = {}; }
-        if (_alt_keyup_table[i]   == undefined) {   _alt_keyup_table[i] = {}; }
-        if (_shift_keyup_table[i] == undefined) { _shift_keyup_table[i] = {}; }
+        if (_keyup_table[i]         == undefined) {       _keyup_table[i]   = {}; }
+        if (_ctrl_keyup_table[i]    == undefined) {  _ctrl_keyup_table[i]   = {}; }
+        if (_alt_keyup_table[i]     == undefined) {   _alt_keyup_table[i]   = {}; }
+        if (_shift_keyup_table[i]   == undefined) { _shift_keyup_table[i]   = {}; }
+        if (_wheel_down[i]          == undefined) {   _wheel_down[i]        = {}; }
+        if (_wheel_up[i]            == undefined) { _wheel_up[i]            = {}; }
     };
 
-    // trigger keydown event
     var _keydown = function (event) {
-        var k = _parseCode(event.which, 'keydown');
-
-        // check combined key state
+        var k = _parseCode(event.which);
         if (k == 'CTRL') {
             _ctrl_state = true;
         } else if (k == 'ALT') {
@@ -234,7 +276,6 @@ KeyManager = (function () {
             _shift_state = true;
         }
 
-        // lookup tables to pick function callback
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
@@ -251,47 +292,37 @@ KeyManager = (function () {
             key_string = k;
         }
 
-        // _disable is to detect whether an input or textarea being focused
-        if (_disable) {
+        if (disable) {
             if (key_string == 'ESC' || key_string == '<C-[>') {
                 $('input, textarea').blur();
             }
             return true;
         }
 
-        // built-in alias '<C-[>' to 'ESC'
         if (key_string == '<C-[>') {
             if ('ESC' in _keydown_table[_cur_namespace]) {
                 return _keydown_table[_cur_namespace]['ESC']('ESC');
             }
         }
-
-        // built-in alias '<C-h>' to 'BACKSPACE'
         if (key_string == '<C-h>') {
             if ('BACKSPACE' in _keydown_table[_cur_namespace]) {
                 _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
-
-        // normal key lookup
         if (k in target_table) {
             var ret = target_table[k](key_string);
-
-            // 'F5' and 'F12' will not be blocked anyway
             if (key_string == 'F5' || key_string == 'F12') return true;
-
             if (ret == undefined) return false;
             return ret;
         }
+        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
     var _keyup = function (event) {
-        var k = _parseCode(event.which, ' keyup ');
+        var k = _parseCode(event.which);
         if (k == 'CTRL') {
-
-        // check combined key state
             _ctrl_state = false;
         } else if (k == 'ALT') {
             _alt_state = false;
@@ -301,7 +332,6 @@ KeyManager = (function () {
             _caps_state = !_caps_state;
         }
 
-        // lookup tables to pick function callback
         var target_table = null;
         var key_string = '';
         if (_ctrl_state) {
@@ -318,47 +348,35 @@ KeyManager = (function () {
             key_string = k;
         }
 
-        // _disable is to detect whether an input or textarea being focused
-        if (_disable) {
+        if (disable) {
             if (key_string == 'ESC' || key_string == '<C-[>') {
                 $('input, textarea').blur();
             }
-            // if yes, every key should not be blocked
-            // or users can type anymore
             return true;
         }
 
-        // built-in alias '<C-[>' to 'ESC'
         if (key_string == '<C-[>') {
             if ('ESC' in _keyup_table[_cur_namespace]) {
                 return _keyup_table[_cur_namespace]['ESC']('ESC');
             }
         }
-
-        // built-in alias '<C-h>' to 'BACKSPACE'
         if (key_string == '<C-h>') {
             if ('BACKSPACE' in _keyup_table[_cur_namespace]) {
                 _keydown_table[_cur_namespace]['BACKSPACE']('BACKSPACE');
                 return false;
             }
         }
-
-        // normal key lookup
         if (k in target_table) {
             var ret = target_table[k](key_string);
-
-            // 'F5' and 'F12' will not be blocked anyway
             if (key_string == 'F5' || key_string == 'F12') return true;
-
             if (ret == undefined) return false;
             return ret;
         }
+        //if (/<.-.*>/.test(key_string)) return false;
         return true;
     };
 
-    // bind callback to key
     var _bind = function (key, edge, callback) {
-        // check if the key is a combined key
         var key_tuple = _parse_key(key);
         var key_type = key_tuple[0];
         var key_content = key_tuple[1];
@@ -390,6 +408,14 @@ KeyManager = (function () {
         if (target_table != null) {
             target_table[key_content] = callback;
         }
+        //if (key_content == 'ESC') {
+        //    console.log('detect esc');
+        //    if (edge == 'DOWN') {
+        //        _ctrl_keydown_table['['] = callback;
+        //    } else if (edge == 'UP') {
+        //        _ctrl_keyup_table['['] = callback;
+        //    }
+        //}
     };
 
     // Some important bindings to browser
@@ -401,23 +427,22 @@ KeyManager = (function () {
         console.log('blured and reset');
     });
 
-    var _disable = false;
+    var disable = false;
 
-    var _ignore_input_flag = false;
+    var ignore_input_flag = false;
 
     $(function () {
         $(document).keydown(_keydown).keyup(_keyup);
 
         $('input, textarea').focus(function () {
-            if (_ignore_input_flag) return;
-            _disable = true;
+            if (ignore_input_flag) return;
+            disable = true;
             console.log('input tag or textarea tag focused.');
         }).blur(function () {
-            if (_ignore_input_flag) return;
-            _disable = false;
+            if (ignore_input_flag) return;
+            disable = false;
         });
 
-        // Mouse wheel scrolling detection
         $('body').bind('mousewheel DOMMouseScroll', function(event) {
             //var delta = event.originalEvent.wheelDelta || (-event.detail);
             var delta = 0;
@@ -428,22 +453,21 @@ KeyManager = (function () {
             }
             if (delta > 0) {
                 if (_cur_namespace in _wheel_up) {
-                    return _wheel_up();
+                    return _wheel_up[_cur_namespace]();
                 }
             } else if (delta < 0) {
                 if (_cur_namespace in _wheel_down) {
-                    return _wheel_down();
+                    return _wheel_down[_cur_namespace]();
                 }
             }
             return true;
         });
     });
 
-    // initial namespace
-    _add_namespace(_cur_namespace);
-
     var _wheel_up = {};
     var _wheel_down = {};
+
+    _add_namespace(_cur_namespace);
 
     return {
         keydown : function (key, callback) {
@@ -485,9 +509,9 @@ KeyManager = (function () {
             return KeyManager;
         },
         ignore_input : function (i) {
-            _ignore_input_flag = i;
+            ignore_input_flag = i;
             if (i) {
-                _disable = false;
+                disable = false;
             }
         },
         namespace : function (i) {
