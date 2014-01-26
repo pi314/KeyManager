@@ -278,13 +278,13 @@ KeyManager = (function () {
 
         var target_table = null;
         var key_string = '';
-        if (_ctrl_state) {
+        if (_ctrl_state && k != 'CTRL') {
             target_table = _ctrl_keydown_table[_cur_namespace];
             key_string = '<C-'+k+'>';
-        } else if (_alt_state) {
+        } else if (_alt_state && k != 'ALT') {
             target_table = _alt_keydown_table[_cur_namespace];
             key_string = '<A-'+k+'>';
-        } else if (_shift_state) {
+        } else if (_shift_state && k != 'SHIFT') {
             target_table = _shift_keydown_table[_cur_namespace];
             key_string = _reverse_shift_alias_key(k);
         } else {
@@ -327,13 +327,13 @@ KeyManager = (function () {
 
         var target_table = null;
         var key_string = '';
-        if (_ctrl_state) {
+        if (_ctrl_state && k != 'CTRL') {
             target_table = _ctrl_keyup_table[_cur_namespace];
             key_string = '<C-'+k+'>';
-        } else if (_alt_state) {
+        } else if (_alt_state && k != 'ALT') {
             target_table = _alt_keyup_table[_cur_namespace];
             key_string = '<A-'+k+'>';
-        } else if (_shift_state) {
+        } else if (_shift_state && k != 'SHIFT') {
             target_table = _shift_keyup_table[_cur_namespace];
             key_string = _reverse_shift_alias_key(k);
         } else {
