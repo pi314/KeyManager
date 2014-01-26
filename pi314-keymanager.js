@@ -292,13 +292,6 @@ KeyManager = (function () {
             key_string = k;
         }
 
-        if (disable) {
-            if (key_string == 'ESC' || key_string == '<C-[>') {
-                $('input, textarea').blur();
-            }
-            return true;
-        }
-
         if (key_string == '<C-[>') {
             if ('ESC' in _keydown_table[_cur_namespace]) {
                 return _keydown_table[_cur_namespace]['ESC']('ESC');
@@ -346,13 +339,6 @@ KeyManager = (function () {
         } else {
             target_table = _keyup_table[_cur_namespace];
             key_string = k;
-        }
-
-        if (disable) {
-            if (key_string == 'ESC' || key_string == '<C-[>') {
-                $('input, textarea').blur();
-            }
-            return true;
         }
 
         if (key_string == '<C-[>') {
@@ -427,21 +413,8 @@ KeyManager = (function () {
         console.log('blured and reset');
     });
 
-    var disable = false;
-
-    var ignore_input_flag = false;
-
     $(function () {
         $(document).keydown(_keydown).keyup(_keyup);
-
-        $('input, textarea').focus(function () {
-            if (ignore_input_flag) return;
-            disable = true;
-            console.log('input tag or textarea tag focused.');
-        }).blur(function () {
-            if (ignore_input_flag) return;
-            disable = false;
-        });
 
         $('body').bind('mousewheel DOMMouseScroll', function(event) {
             //var delta = event.originalEvent.wheelDelta || (-event.detail);
@@ -507,12 +480,6 @@ KeyManager = (function () {
                 _bind(_shift_alias_key(key), 'UP', callback);
             }
             return KeyManager;
-        },
-        ignore_input : function (i) {
-            ignore_input_flag = i;
-            if (i) {
-                disable = false;
-            }
         },
         namespace : function (i) {
             if (i == undefined) {

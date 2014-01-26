@@ -1,3 +1,8 @@
+update on 20140126
+==================
+
+-   Delete the "ignore_input" related feature, because namespace can replace this.
+
 update on 20140124
 ==================
 
