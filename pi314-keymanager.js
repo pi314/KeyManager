@@ -442,6 +442,9 @@ KeyManager = (function () {
 
     _add_namespace(_cur_namespace);
 
+    _wheel_up[_cur_namespace]   = function(){return true;};
+    _wheel_down[_cur_namespace] = function(){return true;};
+
     return {
         keydown : function (key, callback) {
             key = _alias_key(key);
