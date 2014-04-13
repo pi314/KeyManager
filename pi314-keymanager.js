@@ -1,101 +1,10 @@
-/*******************************************************************************
-This module creates a global object which is named KeyManager.
-KeyManager is for handle user keyboard on web pages.
-I made this module for practice.
-
-Usage:
-KeyManager.keydown(key, callback);
-KeyManager.keyup(key, callback);
-KeyManager.keyup(key, callback).keyup(key, callback)...;
-
-KeyManager.namespace();
-KeyManager.namespace('test');
-
-Key can be:
-.   A string includes normal characters like 'pi314'.
-.   A string includes special characters like '!@#$%^&*(asdf'.
-.   A string presents special alias like 'ENTER', 'BACKSPACE', 'BACKSLASH', etc.
-.   A string presents combined keys like '<C-x>', I use Vim's notation.
-.   An arrry includes many strings like ['a', 'b', 'ENTER', 'BACKSLASH', '@#']
-
-Callback must be a function, but I didn't do related check, so be careful please.
-The first argument of callback will be the key being pressed.
-When you use
-
-    KeyManager.keydown('abcde', function (user_input_key) {});
-
-to catch a key, the variable user_input_key helps you to recognize which key is being pressed.
-
-Combined keys
-<C-c>   ctrl+c
-<S-c>   shift+c
-<A-c>   alt+c
-The first symbol presents control keys must in uppercase.
-
-pi314 @ nctu
-2013/05/30
-I love JavaScript, Python, and Vim.
-michael66230@gmail.com
-
-update on 20130701
-    add macros: NUMBER, LOWER, UPPER, ...
-    _alias_key_table may be deprecated.
-
-update on 20130701
-    do alias in _keydown and _keyup to make <C-[> become ESC
-
-update on 20130704
-    do alias in _keydown and _keyup to make <C-h> become BACKSPACE
-    return false so that <C-h> event will not propogate
-
-update on 20130714
-    add check: if a callback function returns undefined,
-    KeyManager return false to keep event propogate,
-    but F5 and F12 event will still be propogated.
-
-    add message shows the constants that KeyManager provides.
-
-update on 20130907
-    set version number to beta-4
-    fix the problem that disables input tags and textarea tags.
-
-    add KeyManager.ignore_input() to ignore input tags and textarea tags.
-
-update on 20130925
-    %s/^ *$//g
-    add namespaces
-        add KeyManager._add_namespace()
-        add KeyManager.namespace()
-    set version number to beta-5
-
-update on 20131003
-    fix bug: the 'DEFAULT' namespace wasn't been initialized.
-    change 'DEFAULT' to '__DEFAULT__'
-
-update on 20131012
-    although this is a little bit strenge,
-    I add scroll_down and scroll_up binding feature into KeyManager
-    KeyManager.scroll_down(callback);
-    KeyManager.scroll_up(callback);
-    this can be used to bind event on mouse wheel scroll.
-
-update on 20131030
-    Fix error on scrolling: no namespace, and scroll down returns false.
-
-update on 20131125
-    Remove "return false" action on keydown and keyup /<.-.>/
-
-update on 20140124
-    Fix error on scrolling: wrongly usage of _wheel_down and _wheel_up object.
-*******************************************************************************/
-
 NUMBER = '1234567890';
 LOWER = 'abcdefghijklmnopqrstuvwxyz';
 UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 ALPHABET = LOWER + UPPER;
 ARROW = ['UP', 'LEFT', 'RIGHT', 'DOWN'],
 CONTROL = ['SHIFT',   'CTRL',      'ALT',
-           'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',   'SPACE',
+           'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',
            'INSERT',  'DELETE',    'ESC',
            'PGUP',    'PGDN',      'END',   'HOME',
            'LEFT',    'UP',        'RIGHT', 'DOWN',
@@ -121,7 +30,7 @@ KeyManager = (function () {
         'ALPHABET':'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZ',
         'ARROW'  : ['UP', 'LEFT', 'RIGHT', 'DOWN'],
         'CONTROL': ['SHIFT',   'CTRL',      'ALT',
-            'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',   'SPACE',
+            'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',
             'INSERT',  'DELETE',    'ESC',
             'PGUP',    'PGDN',      'END',   'HOME',
             'LEFT',    'UP',        'RIGHT', 'DOWN',
@@ -134,7 +43,7 @@ KeyManager = (function () {
 
     var _named_key_list = {
         'SHIFT':'',   'CTRL':'',      'ALT':'',
-        'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',   'SPACE':'',
+        'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',
         'INSERT':'',  'DELETE':'',    'ESC':'',
         'PGUP':'',    'PGDN':'',      'END':'',   'HOME':'',
         'LEFT':'',    'UP':'',        'RIGHT':'', 'DOWN' :'',
@@ -169,7 +78,7 @@ KeyManager = (function () {
         8:'BACKSPACE',        9 :'TAB',        13:'ENTER',
         16:'SHIFT',           17:'CTRL',       18:'ALT',
         20:'CAPSLOCK',
-        27:'ESC',             32:'SPACE',      33:'PGUP',
+        27:'ESC',             32:' ',      33:'PGUP',
         34:'PGDN',            35:'END',        36:'HOME',
         37:'LEFT',            38:'UP',         39:'RIGHT',
         40:'DOWN',            45:'INSERT',     46:'DELETE',
