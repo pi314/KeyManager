@@ -4,7 +4,7 @@ UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 ALPHABET = LOWER + UPPER;
 ARROW = ['UP', 'LEFT', 'RIGHT', 'DOWN'],
 CONTROL = ['SHIFT',   'CTRL',      'ALT',
-           'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',
+           'CAPSLOCK','BACKSPACE', 'TAB',
            'INSERT',  'DELETE',    'ESC',
            'PGUP',    'PGDN',      'END',   'HOME',
            'LEFT',    'UP',        'RIGHT', 'DOWN',
@@ -30,7 +30,7 @@ KeyManager = (function () {
         'ALPHABET':'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRTSUVWXYZ',
         'ARROW'  : ['UP', 'LEFT', 'RIGHT', 'DOWN'],
         'CONTROL': ['SHIFT',   'CTRL',      'ALT',
-            'CAPSLOCK','BACKSPACE', 'TAB',   'ENTER',
+            'CAPSLOCK','BACKSPACE', 'TAB',
             'INSERT',  'DELETE',    'ESC',
             'PGUP',    'PGDN',      'END',   'HOME',
             'LEFT',    'UP',        'RIGHT', 'DOWN',
@@ -43,7 +43,7 @@ KeyManager = (function () {
 
     var _named_key_list = {
         'SHIFT':'',   'CTRL':'',      'ALT':'',
-        'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',   'ENTER':'',
+        'CAPSLOCK':'','BACKSPACE':'', 'TAB':'',
         'INSERT':'',  'DELETE':'',    'ESC':'',
         'PGUP':'',    'PGDN':'',      'END':'',   'HOME':'',
         'LEFT':'',    'UP':'',        'RIGHT':'', 'DOWN' :'',
@@ -75,7 +75,7 @@ KeyManager = (function () {
     };
 
     var _key_code_table = {
-        8:'BACKSPACE',        9 :'TAB',        13:'ENTER',
+        8:'BACKSPACE',        9 :'TAB',        13:'\n',
         16:'SHIFT',           17:'CTRL',       18:'ALT',
         20:'CAPSLOCK',
         27:'ESC',             32:' ',      33:'PGUP',
