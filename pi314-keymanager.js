@@ -363,7 +363,7 @@ KeyManager = (function () {
                 }
             } else if (_named_key(key) || _combine_key(key)) { // special key and combine key
                 _bind(key, 'DOWN', callback);
-            } else if (key.length > 1 && !/<.-.*>/.test(key)) {
+            } else if (key.length > 1 && !/<.-.>/.test(key)) {
                 for (var i in key) {
                     _bind(_shift_alias_key(key[i]), 'DOWN', callback);
                 }
@@ -382,7 +382,7 @@ KeyManager = (function () {
                 }
             } else if (_named_key(key) || _combine_key(key)) { // special key and combine key
                 _bind(key, 'UP', callback);
-            } else if (key.length > 1 && !/<.-*>/.test(key)) {
+            } else if (key.length > 1 && !/<.-.>/.test(key)) {
                 for (var i in key) {
                     _bind(_shift_alias_key(key[i]), 'UP', callback);
                 }
